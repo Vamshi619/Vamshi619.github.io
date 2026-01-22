@@ -7,6 +7,7 @@
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: flex; flex-direction: column; }
+
     .topbar {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       padding: 10px 14px;
@@ -15,11 +16,16 @@
       gap: 12px;
       align-items: center;
       justify-content: space-between;
+      position: sticky;
+      top: 0;
       background: white;
+      z-index: 10;
     }
+
     .hint { color: #6b7280; font-size: 13px; }
     .wrap { flex: 1; min-height: 0; }
     svg { width: 100%; height: 100%; }
+
     .btn {
       font-size: 13px;
       padding: 6px 10px;
@@ -29,11 +35,14 @@
       cursor: pointer;
     }
     .btn:hover { background: #f3f4f6; }
+
     #error {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      padding: 12px 14px;
+      padding: 10px 14px;
       color: #b91c1c;
       display: none;
+      border-bottom: 1px solid #fee2e2;
+      background: #fff1f2;
     }
   </style>
 </head>
@@ -53,7 +62,7 @@
     <svg id="mindmap"></svg>
   </div>
 
-  <!-- ✅ Edit your mind map here (Markdown). Links become clickable nodes. -->
+  <!-- ✅ Edit your nodes here (Markdown). Links become clickable nodes. -->
   <script type="text/template" id="mm">
 # My Hub
 - [GitHub](https://github.com)
@@ -63,13 +72,11 @@
   - [LangChain](https://python.langchain.com/)
   - [FastAPI](https://fastapi.tiangolo.com/)
 - Work
-  - [My Notes Repo](https://github.com/Vamshi619/VAMSHI_NOTES)
+  - [VAMSHI_NOTES](https://github.com/Vamshi619/VAMSHI_NOTES)
   </script>
 
-  <!-- ✅ More reliable CDNs than jsdelivr -->
-  <script src="https://unpkg.com/d3@6"></script>
-  <script src="https://unpkg.com/markmap-lib@0.16.1/dist/browser/index.min.js"></script>
-  <script src="https://unpkg.com/markmap-view@0.16.1/dist/browser/index.min.js"></script>
+  <!-- Markmap (loads and renders the Markdown above into a zoomable SVG mindmap) -->
+  <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.16.1"></script>
 
   <script>
     (function () {
@@ -82,22 +89,32 @@
       window.addEventListener('load', () => {
         try {
           if (!window.markmap) {
-            showError("Markmap failed to load (CDN blocked). Try disabling adblock or use a different network.");
+            showError("Markmap failed to load. Possibly blocked network/CDN. Try disabling adblock or changing network.");
             return;
           }
 
+          const { markmap } = window;
           const svg = document.getElementById('mindmap');
           const md = document.getElementById('mm').textContent.trim();
 
-          const transformer = new window.markmap.Transformer();
+          // ✅ FIX: Transformer must be instantiated
+          const transformer = new markmap.Transformer();
           const { root } = transformer.transform(md);
 
-          const mm = window.markmap.Markmap.create(svg, { autoFit: true, duration: 200 }, root);
+          const mm = markmap.Markmap.create(svg, {
+            autoFit: true,
+            duration: 250,
+            zoom: true,
+            pan: true
+          }, root);
+
+          // Fit on load
           mm.fit();
 
+          // Reset button
           document.getElementById('resetBtn').addEventListener('click', () => mm.fit());
 
-          // Open node links in new tab
+          // Open node links in a new tab
           svg.addEventListener('click', (e) => {
             const a = e.target.closest('a');
             if (!a) return;
@@ -111,7 +128,10 @@
 
         } catch (err) {
           showError("Error rendering mind map: " + (err && err.message ? err.message : String(err)));
+          console.error(err);
         }
       });
     })();
-  </
+  </script>
+</body>
+</html>
