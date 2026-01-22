@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mind Map</title>
+
+  <!-- prevents favicon.ico 404 -->
   <link rel="icon" href="data:,">
+
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: flex; flex-direction: column; }
@@ -17,9 +20,9 @@
       gap: 12px;
       align-items: center;
       justify-content: space-between;
+      background: white;
       position: sticky;
       top: 0;
-      background: white;
       z-index: 10;
     }
 
@@ -63,8 +66,8 @@
     <svg id="mindmap"></svg>
   </div>
 
-  <!-- ✅ Edit your nodes here (Markdown). Links become clickable nodes. -->
-  <script type="text/template" id="mm">
+  <!-- ✅ Edit your mind map here -->
+  <pre id="mm" hidden>
 # My Hub
 - [GitHub](https://github.com)
   - [My Repos](https://github.com/Vamshi619?tab=repositories)
@@ -74,10 +77,12 @@
   - [FastAPI](https://fastapi.tiangolo.com/)
 - Work
   - [VAMSHI_NOTES](https://github.com/Vamshi619/VAMSHI_NOTES)
-  </script>
+  </pre>
 
-  <!-- Markmap (loads and renders the Markdown above into a zoomable SVG mindmap) -->
-  <script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.16.1"></script>
+  <!-- ✅ IMPORTANT: use markmap-lib + d3 + markmap-view (NOT markmap-autoloader) -->
+  <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.18.12/dist/browser/index.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@6.7.0/dist/d3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.18.12/dist/browser/index.js"></script>
 
   <script>
     (function () {
@@ -87,48 +92,42 @@
         el.textContent = msg;
       };
 
-      window.addEventListener('load', () => {
+      window.addEventListener('load', async () => {
         try {
           if (!window.markmap) {
-            showError("Markmap failed to load. Possibly blocked network/CDN. Try disabling adblock or changing network.");
+            showError("markmap failed to load (CDN blocked?). Try different network or disable adblock.");
             return;
           }
 
-          const { markmap } = window;
-          const svg = document.getElementById('mindmap');
-          const md = document.getElementById('mm').textContent.trim();
+          const markdown = document.getElementById('mm').textContent.trim();
 
-          // ✅ FIX: Transformer must be instantiated
-          const transformer = new markmap.Transformer();
-          const { root } = transformer.transform(md);
+          const { Markmap, Transformer, loadCSS, loadJS } = window.markmap;
 
-          const mm = markmap.Markmap.create(svg, {
-            autoFit: true,
-            duration: 250,
-            zoom: true,
-            pan: true
-          }, root);
+          const transformer = new Transformer();
+          const { root, features } = transformer.transform(markdown);
+          const { styles, scripts } = transformer.getUsedAssets(features);
 
-          // Fit on load
+          if (styles) loadCSS(styles);
+          if (scripts) await loadJS(scripts, { getMarkmap: () => window.markmap });
+
+          const mm = Markmap.create('#mindmap', null, root);
           mm.fit();
 
-          // Reset button
           document.getElementById('resetBtn').addEventListener('click', () => mm.fit());
 
           // Open node links in a new tab
+          const svg = document.getElementById('mindmap');
           svg.addEventListener('click', (e) => {
             const a = e.target.closest('a');
             if (!a) return;
-
             const url = a.getAttribute('href') || a.getAttribute('xlink:href');
             if (!url) return;
-
             e.preventDefault();
             window.open(url, '_blank', 'noopener,noreferrer');
           });
 
         } catch (err) {
-          showError("Error rendering mind map: " + (err && err.message ? err.message : String(err)));
+          showError("Error rendering mind map: " + (err?.message || String(err)));
           console.error(err);
         }
       });
